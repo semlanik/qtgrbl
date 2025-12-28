@@ -1,0 +1,277 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2020 Alexey Edelev <semlanik@gmail.com>
+ *
+ * This file is part of QtGrbl project https://github.com/semlanik/qtgrbl
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+ * software and associated documentation files (the "Software"), to deal in the Software
+ * without restriction, including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+ * to permit persons to whom the Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies
+ * or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+ * PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+ * FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
+#include "grblserial.h"
+
+#include <QSerialPortInfo>
+#include <QSerialPort>
+#include <QDebug>
+
+using namespace QtGrbl;
+
+GrblSerial::GrblSerial() : QObject()
+{
+    updatePortList();
+}
+
+
+GrblSerial::~GrblSerial()
+{
+    disconnectPort();
+}
+
+void GrblSerial::updatePortList()
+{
+    m_portList.clear();
+    emit portListChanged();
+
+    auto ports = QSerialPortInfo::availablePorts();
+    for (const auto &port : ports)
+        m_portList.append(port.portName());
+    emit portListChanged();
+}
+
+void GrblSerial::connectPort()
+{
+    GrblSerial::connectPort(m_selectedPort);
+}
+
+void GrblSerial::connectPort(int portIndex)
+{
+    if (m_port) {
+        qCritical() << "Port is already opened" << m_port->portName();
+        return;
+    }
+
+    auto ports = QSerialPortInfo::availablePorts();
+    if (portIndex >= ports.size() || portIndex < 0) {
+        qCritical() << "invalid port index" << portIndex;
+        emit isConnectedChanged();
+        return;
+    }
+    auto portInfo = ports[portIndex];
+    qDebug() << "Connecting to " << portInfo.portName();
+    m_port = std::make_unique<QSerialPort>(portInfo);
+    m_port->setBaudRate(QSerialPort::Baud115200);
+    m_port->setFlowControl(QSerialPort::NoFlowControl);
+    m_port->setDataBits(QSerialPort::Data8);
+    m_port->setParity(QSerialPort::NoParity);
+    m_port->setStopBits(QSerialPort::OneStop);
+
+    if (!m_port->open(QSerialPort::ReadWrite)) {
+        qCritical() << "Unable to open" << m_port->portName() << m_port->errorString();
+        m_port.reset();
+        emit isConnectedChanged();
+        return;
+    }
+
+    emit isConnectedChanged();
+
+    QObject::connect(m_port.get(), &QSerialPort::readyRead, this, [this]() {
+        while (m_port->canReadLine()) {
+            QByteArray grblData = m_port->readLine();
+            qDebug() << "Raw data: "  << grblData.toHex();
+            qDebug() << "String data: " << grblData;
+
+            emit responseReceived(grblData);
+            if (grblData == "ok\r\n") {
+                m_activeCommand.clear();
+                setStatus(GrblSerial::Idle);
+                processQueue();
+            } else if (grblData.toLower().startsWith("alarm:")) {
+                //TODO: Show user popup that indicates the actual alarm message.
+                //Reset the machine state immediately for now.
+                sendCommand(QByteArray("\x18"), CommandPriority::Realtime);
+            } else if (grblData.toLower().startsWith("error:")) {
+                qDebug() << "newGrblError string" << grblData.split(':').last();
+
+                setGrblError(std::atoi(grblData.split(':').last().trimmed().data()));
+                setStatus(GrblSerial::Error);
+                sendCommand(QString("!"), QtGrbl::CommandPriority::Realtime);
+                qCritical() << "Error occured: " << QString::fromLatin1(grblData) << " active command: " << m_activeCommand;
+            }
+        }
+    });
+    QObject::connect(m_port.get(), &QSerialPort::errorOccurred, this, &GrblSerial::onError);
+}
+
+void GrblSerial::disconnectPort()
+{
+    if (m_port) {
+        if (m_port->isOpen()) {
+            m_port->close();
+        }
+        m_port.reset();
+        emit isConnectedChanged();
+    }
+    m_queue.clear();
+    m_sent.clear();
+    setStatus(GrblSerial::Idle);
+}
+
+bool GrblSerial::isConnected() const
+{
+    return m_port && m_port->isOpen();
+}
+
+void GrblSerial::onError(QSerialPort::SerialPortError error)
+{
+    if (error == QSerialPort::NoError) {
+        qCritical() << "\"NoError\" error occured, it should n't happen";
+        return;
+    }
+
+    setStatus(GrblSerial::Error);
+    qCritical() << "Error " << error << " occured on serial port. Closing it.";
+    disconnectPort();
+}
+
+void GrblSerial::sendCommand(const QString &command, QtGrbl::CommandPriority prio)
+{
+    QByteArray buffer = command.trimmed().toLatin1();
+    sendCommand(buffer, prio);
+}
+
+void GrblSerial::sendCommand(QByteArrayList commands, QtGrbl::CommandPriority prio)
+{
+    if (!m_port || !m_port->isOpen()) {
+        qCritical() << "Unable to send data. Port is not opened";
+        return;
+    }
+
+    if (prio == QtGrbl::CommandPriority::Front) {
+        std::reverse(std::begin(commands), std::end(commands));
+    }
+
+    for (auto command : commands) {
+        if (command.startsWith(';') || command.startsWith("(")) { // Commands commented out
+            qDebug() << "Skip command: " << command;
+            continue;
+        }
+
+        command = command.trimmed();
+        qDebug() << "Send command: " << command << "Prio: " << prio;
+
+        if (prio == QtGrbl::CommandPriority::Realtime) {
+            write(command);
+            continue;
+        }
+
+        command.append('\n'); /* TODO: add setting to switch carriage
+                               * return symbol
+                               */
+        if (prio == QtGrbl::CommandPriority::Front) {
+            m_queue.push_front(command);
+        } else {
+            m_queue.push_back(command);
+        }
+    }
+    processQueue();
+}
+
+void GrblSerial::sendCommand(const QByteArray &command, QtGrbl::CommandPriority prio)
+{
+    sendCommand(QByteArrayList() << command, prio);
+}
+
+void GrblSerial::processQueue()
+{
+    switch (m_status) {
+    case GrblSerial::Idle:
+        if (m_queue.size() > 0) {
+            auto buffer = m_queue.takeFirst();
+            if (buffer.size() > GrblMaxCommandLineSize) {
+                qCritical() << "Invalid command size: " << buffer.size() << "Maximum command size"
+                            << "is" << GrblMaxCommandLineSize << "bytes";
+                return;
+            }
+            write(buffer);
+            m_activeCommand = buffer;
+            setStatus(GrblSerial::Busy);
+        }
+        break;
+    case GrblSerial::Error:
+        qCritical() << "Machine is in error state, user action required";
+    default:
+        break;
+    }
+}
+
+void GrblSerial::write(const QByteArray &buffer)
+{
+    if (!m_port || !m_port->isOpen()) {
+        qCritical() << "Unable to write data. Port is not opened";
+        return;
+    }
+
+    qDebug() << "write buffer: " << buffer;
+    if (m_port->write(buffer) != buffer.size()) {
+        qCritical() << "Unable to write command buffer";
+        return;
+    }
+
+    emit commandSent(buffer);
+}
+
+void GrblSerial::clearError()
+{
+    if (m_status == GrblSerial::Error) {
+        qWarning() << "Manual error unlock triggered";
+        setStatus(GrblSerial::Idle);
+        setGrblError(0);
+        processQueue();
+    } else {
+        qWarning() << "Manual error unlock triggered but status is: " << m_status;
+    }
+}
+
+void GrblSerial::clearCommandQueue()
+{
+    m_queue.clear();
+    m_sent.clear();
+    sendCommand(QByteArray("\x85"), CommandPriority::Front);
+}
+
+int GrblSerial::grblError() const
+{
+    return m_grblError;
+}
+
+void GrblSerial::setGrblError(int newGrblError)
+{
+    if (m_grblError == newGrblError)
+        return;
+    m_grblError = newGrblError;
+    emit grblErrorChanged();
+}
+
+void GrblSerial::setSelectedPort(int selectedPort)
+{
+    if (m_selectedPort == selectedPort)
+        return;
+
+    m_selectedPort = selectedPort;
+    emit selectedPortChanged(m_selectedPort);
+}
