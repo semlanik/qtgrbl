@@ -24,29 +24,6 @@
  */
 import QtQuick
 
-Item {
-    id: root
-    width: indicator.width + 10
-    height: indicator.height + 10
-    Rectangle {
-        id: indicator
-        anchors.centerIn: parent
-        height: 15
-        width: 15
-        radius: width/5
-        color: {
-            switch (GrblSerial.status) {
-                case GrblSerial.Error:
-                    return "red"
-                case GrblSerial.Busy:
-                    return "yellow"
-                case GrblSerial.Alarm:
-                    return "orange"
-                case GrblSerial.Idle:
-                    return "green"
-                default:
-                    return "gray"
-            }
-        }
-    }
+SettingUnitView {
+    validator: IntValidator {}
 }

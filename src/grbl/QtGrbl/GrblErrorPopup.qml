@@ -1,39 +1,88 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2025 Alexey Edelev <semlanik@gmail.com>
+ *
+ * This file is part of QtGrbl project https://github.com/semlanik/qtgrbl
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+ * software and associated documentation files (the "Software"), to deal in the Software
+ * without restriction, including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+ * to permit persons to whom the Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies
+ * or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+ * PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+ * FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 import QtQuick
 import QtQuick.Controls
+
+import QtGrbl
 
 Popup {
     id: root
     anchors.centerIn: parent
-    width: 200
-    height: 300
+    contentWidth: 300
+    contentHeight: 200
     modal: true
     focus: true
-    onClosed: {
-        errorText.text = ""
-        GrblSerial.clearError()
-    }
+    onClosed: root.clear()
     contentItem: Item {
-        height: childrenRect.width
-        width: childrenRect.height
         Text {
             id: errorText
-            text: "No error"
+            anchors {
+                left: parent.left
+                right: parent.right
+            }
+            height: implicitHeight
+            wrapMode: Text.WordWrap
+            font.bold: true
         }
+        Text {
+            id: errorDetails
+            anchors {
+                verticalCenter: parent.verticalCenter
+                left: parent.left
+                right: parent.right
+            }
+            height: implicitHeight
+            wrapMode: Text.WordWrap
+            horizontalAlignment: Text.AlignHCenter
+        }
+
         Button {
-            anchors.top: errorText.bottom
-            text: "Clear and reset"
+            anchors{
+                bottom: parent.bottom
+                horizontalCenter: parent.horizontalCenter
+            }
+            text: qsTr("Clear and reset")
             onClicked: root.close()
         }
     }
     Connections {
         target: GrblSerial
-        function onGrblErrorChanged() {
-            if (GrblSerial.grblError !== 0) {
-                errorText.text = "Error code:" + GrblSerial.errorCode
+        function onErrorCodeChanged() {
+            if (GrblSerial.errorCode !== 0) {
+                errorText.text = "Error(" + GrblSerial.errorCode + "): " + GrblErrorCodeMapper.getString(GrblSerial.errorCode)
+                errorDetails.text = GrblErrorCodeMapper.getDetails(GrblSerial.errorCode)
                 root.open()
             } else {
-                errorText.text = "No error"
+                root.close()
             }
         }
+    }
+
+    function clear() {
+        errorDetails.text = ""
+        errorText.text = ""
+        GrblSerial.clearError()
     }
 }

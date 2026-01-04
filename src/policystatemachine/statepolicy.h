@@ -85,7 +85,7 @@ private:
     QList<QString> m_stateList;
 };
 
-struct StatePolicyCollectionForeign
+struct QmlStatePolicyCollection
 {
     Q_GADGET
     QML_FOREIGN(StatePolicyCollection)

@@ -20,6 +20,7 @@ qt_add_qml_module(QtGrbl
         GCodeStateItem.qml
         GrblStatusIndicator.qml
         GrblErrorPopup.qml
+        Settings/GrblSettingsView.qml
     SOURCES
         grblserial.cpp grblserial.h
         grblgcodestate.cpp grblgcodestate.h
@@ -27,7 +28,14 @@ qt_add_qml_module(QtGrbl
         grblstatus.cpp grblstatus.h
         grblengine.cpp grblengine.h
         grblconsole.cpp grblconsole.h
-        SOURCES grblsettings.h grblsettings.cpp
+        grblsettingsmodel.h grblsettingsmodel.cpp
+        QML_FILES Settings/SettingIntView.qml
+        QML_FILES Settings/SettingUnitView.qml
+        QML_FILES Settings/SettingFloatView.qml
+        QML_FILES Settings/SettingBoolView.qml
+        SOURCES
+        QML_FILES Settings/SettingMaskView.qml
+        SOURCES grblerrorcodemapper.h grblerrorcodemapper.cpp
 )
 
 target_link_libraries(QtGrbl PRIVATE QtGrblCommon Qt::SerialPort)

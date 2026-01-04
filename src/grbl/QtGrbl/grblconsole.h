@@ -101,7 +101,7 @@ private:
     bool m_noStatus = true;
 };
 
-class GrblConsoleForeign : public QmlSingletoneBase<GrblConsole>
+class QmlGrblConsole : public QmlSingletoneBase<GrblConsole>
 {
     Q_GADGET
     QML_FOREIGN(GrblConsole)

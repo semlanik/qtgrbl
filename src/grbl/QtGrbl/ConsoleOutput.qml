@@ -23,36 +23,70 @@
  * DEALINGS IN THE SOFTWARE.
  */
 import QtQuick
+import QtQuick.Controls
 
-ListView {
+import QtGrbl
+
+import PolicyStateMachine
+
+Column {
     id: root
-    clip: true
-    delegate: Row {
-        height: childrenRect.height
-        spacing: 10
-        Text {
-            text: model.type === GrblConsoleRecord.Command ? "<" : ">"
-            font.pointSize: 6
-            width: implicitWidth
-            height: implicitHeight
+    Row {
+        Button {
+            text: qsTr("Clear")
+            onClicked: {
+                GrblConsole.clear()
+            }
         }
-        Text {
-            text: Qt.formatDateTime(model.timestamp,"yyyy-MM-dd hh:mm:ss.zzz")
-            font.pointSize: 6
-            width: implicitWidth
-            height: implicitHeight
+        Button {
+            text: qsTr("Save to file...")
+            onClicked: {
+                // TODO: add log saving
+            }
         }
-        TextEdit {
-            font.pointSize: 8
-            text: model.log.trim()
-            width: implicitWidth
-            height: implicitHeight
-            selectByMouse: true
-            readOnly: true
+        Switch {
+            id: followLog
+            text: qsTr("Follow logs")
+            anchors.verticalCenter: parent.verticalCenter
+            onCheckedChanged: {
+                viewport.positionViewAtEnd()
+            }
         }
     }
+    ListView {
+        id: viewport
+        model: GrblConsole
+        height: 500
+        width: parent.width
+        clip: true
+        ScrollBar.vertical: ScrollBar { }
+        delegate: Row {
+            height: childrenRect.height
+            spacing: 5
+            Image {
+                source: model.type === GrblConsoleRecord.Command ? "qrc:/qtgrbl/res/arrow-left-48.png" : "qrc:/qtgrbl/res/arrow-right-48.png"
+                width: 10
+                height: 10
+            }
+            Text {
+                text: Qt.formatDateTime(model.timestamp,"yyyy-MM-dd hh:mm:ss.zzz")
+                font.pointSize: 8
+                width: implicitWidth
+                height: implicitHeight
+            }
+            TextEdit {
+                font.pointSize: 9
+                text: model.log.trim()
+                width: implicitWidth
+                height: implicitHeight
+                selectByMouse: true
+                readOnly: true
+            }
+        }
 
-    onCountChanged: {
-        positionViewAtEnd();
+        onCountChanged: {
+            if (followLog.checked)
+                positionViewAtEnd()
+        }
     }
 }

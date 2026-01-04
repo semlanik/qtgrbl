@@ -36,6 +36,7 @@
 #include "qtgrblcommon.h"
 #include "grblgcodestate.h"
 #include "grblstatus.h"
+#include "grblsettingsmodel.h"
 
 namespace QtGrbl {
 
@@ -47,6 +48,8 @@ class GrblEngine : public QObject
     Q_PROPERTY(QString filePath READ filePath WRITE setFilePath NOTIFY filePathChanged)
     Q_PROPERTY(QtGrbl::GrblGCodeState *gcodeState READ gcodeState CONSTANT)
     Q_PROPERTY(QtGrbl::GrblStatus *grblStatus READ grblStatus CONSTANT)
+    Q_PROPERTY(QtGrbl::GrblSettingsModel *settings READ settings CONSTANT)
+    Q_PROPERTY(QtGrbl::GrblSettingsSortingModel *settingsProxy READ settingsProxy CONSTANT)
 public:
     explicit GrblEngine(QObject *parent = nullptr);
     virtual ~GrblEngine();
@@ -70,6 +73,9 @@ public:
     Q_INVOKABLE void updateGCodeState();
     Q_INVOKABLE void subscribeStatusUpdate();
     Q_INVOKABLE void unsubscribeStatusUpdate();
+    Q_INVOKABLE void requestSettings();
+    Q_INVOKABLE void clearSettings();
+
 
     QString filePath() const
     {
@@ -88,8 +94,20 @@ public:
         return m_grblStatus.get();
     }
 
+    QtGrbl::GrblSettingsModel *settings() const
+    {
+        return m_settings.get();
+    }
+
+    GrblSettingsSortingModel *settingsProxy() const
+    {
+        return m_settingsProxy.get();
+    }
+
     Q_INVOKABLE void resetState();
 
+    Q_INVOKABLE void applySettings();
+    Q_INVOKABLE void saveSettings(const QUrl &fileUrl) const;
 signals:
     void consoleOutputChanged();
     void filePathChanged();
@@ -105,12 +123,14 @@ private:
     QFile m_file;
     QPointer<GrblSerial> m_serialEngine;
     std::unique_ptr<GrblGCodeState> m_gcodeState;
-    std::unique_ptr<QtGrbl::GrblStatus> m_grblStatus;
+    std::unique_ptr<GrblStatus> m_grblStatus;
+    std::unique_ptr<GrblSettingsModel> m_settings;
+    std::unique_ptr<GrblSettingsSortingModel> m_settingsProxy;
     QTimer m_statusTimer;
     inline static QJSEngine *s_engine = nullptr;
 };
 
-class GrblEngineForeign : public QmlSingletoneBase<GrblEngine>
+class QmlGrblEngine : public QmlSingletoneBase<GrblEngine>
 {
     Q_GADGET
     QML_FOREIGN(GrblEngine)

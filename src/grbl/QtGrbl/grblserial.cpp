@@ -88,6 +88,7 @@ void GrblSerial::connectPort(int portIndex)
     }
 
     emit isConnectedChanged();
+    setStatus(Status::Idle);
 
     QObject::connect(m_port.get(), &QSerialPort::readyRead, this, [this]() {
         while (m_port->canReadLine()) {
@@ -98,7 +99,7 @@ void GrblSerial::connectPort(int portIndex)
             emit responseReceived(grblData);
             if (grblData == "ok\r\n") {
                 m_activeCommand.clear();
-                setStatus(GrblSerial::Idle);
+                setStatus(Status::Idle);
                 processQueue();
             } else if (grblData.toLower().startsWith("alarm:")) {
                 //TODO: Show user popup that indicates the actual alarm message.
@@ -107,8 +108,8 @@ void GrblSerial::connectPort(int portIndex)
             } else if (grblData.toLower().startsWith("error:")) {
                 qDebug() << "newGrblError string" << grblData.split(':').last();
 
-                setGrblError(std::atoi(grblData.split(':').last().trimmed().data()));
-                setStatus(GrblSerial::Error);
+                setErrorCode(std::atoi(grblData.split(':').last().trimmed().data()));
+                setStatus(Status::Error);
                 sendCommand(QString("!"), QtGrbl::CommandPriority::Realtime);
                 qCritical() << "Error occured: " << QString::fromLatin1(grblData) << " active command: " << m_activeCommand;
             }
@@ -128,7 +129,7 @@ void GrblSerial::disconnectPort()
     }
     m_queue.clear();
     m_sent.clear();
-    setStatus(GrblSerial::Idle);
+    setStatus(Status::Unknown);
 }
 
 bool GrblSerial::isConnected() const
@@ -143,7 +144,7 @@ void GrblSerial::onError(QSerialPort::SerialPortError error)
         return;
     }
 
-    setStatus(GrblSerial::Error);
+    setStatus(Status::Error);
     qCritical() << "Error " << error << " occured on serial port. Closing it.";
     disconnectPort();
 }
@@ -199,7 +200,7 @@ void GrblSerial::sendCommand(const QByteArray &command, QtGrbl::CommandPriority 
 void GrblSerial::processQueue()
 {
     switch (m_status) {
-    case GrblSerial::Idle:
+    case Status::Idle:
         if (m_queue.size() > 0) {
             auto buffer = m_queue.takeFirst();
             if (buffer.size() > GrblMaxCommandLineSize) {
@@ -209,10 +210,10 @@ void GrblSerial::processQueue()
             }
             write(buffer);
             m_activeCommand = buffer;
-            setStatus(GrblSerial::Busy);
+            setStatus(Status::Busy);
         }
         break;
-    case GrblSerial::Error:
+    case Status::Error:
         qCritical() << "Machine is in error state, user action required";
     default:
         break;
@@ -237,10 +238,10 @@ void GrblSerial::write(const QByteArray &buffer)
 
 void GrblSerial::clearError()
 {
-    if (m_status == GrblSerial::Error) {
+    if (m_status == Status::Error) {
         qWarning() << "Manual error unlock triggered";
-        setStatus(GrblSerial::Idle);
-        setGrblError(0);
+        setStatus(Status::Idle);
+        setErrorCode(0);
         processQueue();
     } else {
         qWarning() << "Manual error unlock triggered but status is: " << m_status;
@@ -254,17 +255,25 @@ void GrblSerial::clearCommandQueue()
     sendCommand(QByteArray("\x85"), CommandPriority::Front);
 }
 
-int GrblSerial::grblError() const
+int GrblSerial::errorCode() const
 {
-    return m_grblError;
+    return m_errorCode;
 }
 
-void GrblSerial::setGrblError(int newGrblError)
+void GrblSerial::setStatus(Status status)
 {
-    if (m_grblError == newGrblError)
+    if (status != m_status) {
+        m_status = status;
+        emit statusChanged();
+    }
+}
+
+void GrblSerial::setErrorCode(int code)
+{
+    if (m_errorCode == code)
         return;
-    m_grblError = newGrblError;
-    emit grblErrorChanged();
+    m_errorCode = code;
+    emit errorCodeChanged();
 }
 
 void GrblSerial::setSelectedPort(int selectedPort)

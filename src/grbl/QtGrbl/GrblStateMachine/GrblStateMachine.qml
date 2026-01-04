@@ -85,17 +85,11 @@ PolicyStateMachine {
             name: "readSettings"
             stateMachine: root
             onEntered: {
-                //TODO: GrblSettings.update()
+                GrblEngine.requestSettings();
             }
-            //TODO: Transit to next state once settings ready
-            //DSM.SignalTransition {
-            //    targetState: readStatus
-            //    signal: GrblSettings.isValidChanged
-            //    guard: GrblSettings.isValid
-            //}
             DSM.TimeoutTransition {
                 targetState: readGCodeState
-                timeout: 100
+                timeout: 1000
             }
         }
         PolicyState {
@@ -128,52 +122,59 @@ PolicyStateMachine {
             GrblEngine.subscribeStatusUpdate();
         }
         onExited: {
+            console.log("Exit connected state")
+            GrblEngine.clearSettings();
             GrblEngine.unsubscribeStatusUpdate();
         }
-        DSM.SignalTransition {
-            targetState: idle
-            signal: GrblEngine.grblStatus.grblStateChanged
-            guard: GrblEngine.grblStatus.grblState === GrblStatus.Idle
-        }
-        DSM.SignalTransition {
-            targetState: running
-            signal: GrblEngine.grblStatus.grblStateChanged
-            guard: GrblEngine.grblStatus.grblState === GrblStatus.Run
-        }
-        DSM.SignalTransition {
-            targetState: alarm
-            signal: GrblEngine.grblStatus.grblStateChanged
-            guard: GrblEngine.grblStatus.grblState === GrblStatus.Alarm
-        }
-        DSM.SignalTransition {
-            targetState: hold
-            signal: GrblEngine.grblStatus.grblStateChanged
-            guard: GrblEngine.grblStatus.grblState === GrblStatus.Hold
-        }
         PolicyState {
-            id: idle
-            name: "idle"
+            id: connectedProxy
+            name: "connectedProxy"
             stateMachine: root
-        }
-        PolicyState {
-            id: hold
-            name: "hold"
-            stateMachine: root
-            onEntered: {
-                GrblEngine.unsubscribeStatusUpdate()
+            DSM.SignalTransition {
+                targetState: idle
+                signal: GrblEngine.grblStatus.grblStateChanged
+                guard: GrblEngine.grblStatus.grblState === GrblStatus.Idle
+            }
+            DSM.SignalTransition {
+                targetState: running
+                signal: GrblEngine.grblStatus.grblStateChanged
+                guard: GrblEngine.grblStatus.grblState === GrblStatus.Run
+            }
+            DSM.SignalTransition {
+                targetState: alarm
+                signal: GrblEngine.grblStatus.grblStateChanged
+                guard: GrblEngine.grblStatus.grblState === GrblStatus.Alarm
+            }
+            DSM.SignalTransition {
+                targetState: hold
+                signal: GrblEngine.grblStatus.grblStateChanged
+                guard: GrblEngine.grblStatus.grblState === GrblStatus.Hold
+            }
+
+            PolicyState {
+                id: idle
+                name: "idle"
+                stateMachine: root
+            }
+            PolicyState {
+                id: hold
+                name: "hold"
+                stateMachine: root
+                onEntered: {
+                    GrblEngine.unsubscribeStatusUpdate()
+                }
+            }
+            PolicyState {
+                id: running
+                name: "running"
+                stateMachine: root
+            }
+            PolicyState {
+                id: alarm
+                name: "alarm"
+                stateMachine: root
             }
         }
-        PolicyState {
-            id: running
-            name: "running"
-            stateMachine: root
-        }
-        PolicyState {
-            id: alarm
-            name: "alarm"
-            stateMachine: root
-        }
-
         DSM.SignalTransition {
             targetState: disconnecting
             signal: root.toggleConnect

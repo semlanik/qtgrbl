@@ -43,10 +43,14 @@ namespace {
 
 using namespace QtGrbl;
 
-GrblEngine::GrblEngine(QObject *parent) : QObject(parent)
-  , m_gcodeState(std::make_unique<GrblGCodeState>())
-  , m_grblStatus(std::make_unique<GrblStatus>())
+GrblEngine::GrblEngine(QObject *parent) : QObject(parent),
+    m_gcodeState(std::make_unique<GrblGCodeState>()),
+    m_grblStatus(std::make_unique<GrblStatus>()),
+    m_settings(std::make_unique<GrblSettingsModel>()),
+    m_settingsProxy(std::make_unique<GrblSettingsSortingModel>())
 {
+    m_settingsProxy->setSourceModel(m_settings.get());
+    m_settingsProxy->sort(0, Qt::AscendingOrder);
     initStatusUpdates();
 }
 
@@ -87,6 +91,34 @@ void GrblEngine::resetState()
 {
     m_grblStatus->clear();
     m_gcodeState->clear();
+}
+
+void GrblEngine::applySettings()
+{
+    const auto settings = m_settings->serialize(QtGrbl::GrblSettingsModel::SerializeMode::Changed);
+    for (auto it = settings.cbegin(); it != settings.cend(); ++it)
+        emit sendCommand(*it, CommandPriority::Back);
+    emit sendCommand("$$", CommandPriority::Back);
+    qDebug() << "Apply settings: " << settings;
+}
+
+void GrblEngine::saveSettings(const QUrl &fileUrl) const
+{
+    qDebug() << "Save settings to" << fileUrl;
+    if (!fileUrl.isLocalFile()) {
+        // TODO: show error message
+        qDebug() << "Only local files are supported.";
+        return;
+    }
+
+    QFile settingFile(fileUrl.path());
+    if (!settingFile.open(QFile::WriteOnly)) {
+        // TODO: show error message
+        qDebug() << "Unable to open file to write settings" << settingFile.fileName();
+        return;
+    }
+    const auto settings = m_settings->serialize();
+    settingFile.write(settings.join("\r\n"));
 }
 
 void GrblEngine::start()
@@ -137,6 +169,9 @@ void GrblEngine::attach(GrblSerial *serialEngine)
             m_gcodeState->parseRawData(response);
         } else if (response.startsWith(GrblStatusPrefix)) {
             m_grblStatus->parseRawData(response);
+        } else if (response.startsWith('$')) {
+            if (!m_settings->parseItemData(response))
+                qDebug() << "Unknown setting received" << response;
         }
     });
 }
@@ -205,4 +240,14 @@ void GrblEngine::subscribeStatusUpdate()
 void GrblEngine::unsubscribeStatusUpdate()
 {
     m_statusTimer.stop();
+}
+
+void GrblEngine::requestSettings()
+{
+    emit sendCommand(QByteArray("$$"), CommandPriority::Front);
+}
+
+void GrblEngine::clearSettings()
+{
+    m_settings->clear();
 }

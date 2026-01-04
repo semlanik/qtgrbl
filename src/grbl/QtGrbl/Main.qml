@@ -30,9 +30,10 @@ import QtQuick.Layouts
 import QtQuick.Dialogs
 import QtQml.Models
 
-// import QtGrbl
+import QtGrbl
 import "GrblStateMachine"
 import "JogControl"
+import "Settings"
 
 import PolicyStateMachine
 
@@ -82,14 +83,8 @@ Window {
         maxWidth: root.width - leftToolbar.width - toolBar.width
         position: "right"
         content: ObjectModel {
-            GrblStatusIndicator {
-                width: parent ? parent.width : 0
-            }
-
             ConsoleOutput {
-                model: GrblConsole
                 width: parent ? parent.width : 0
-                height: 500
             }
             Item {
                 height: 500
@@ -130,6 +125,13 @@ Window {
         }
     }
 
+    GrblSettingsView {
+        id: settings
+        anchors.centerIn: parent
+        contentHeight: parent.height/2
+        contentWidth: 600
+    }
+
     TextField {
         id: consoleInput
         focus: true
@@ -167,9 +169,13 @@ Window {
         id: toolBar
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        width: toolBarContent.width
+        width: toolBarContent.width + 10
         Row {
             id: toolBarContent
+            GrblStatusIndicator {
+                anchors.verticalCenter: parent.verticalCenter
+                id: grblTransferStatus
+            }
             ComboBox {
                 id: portSelector
                 objectName: "portSelector"
@@ -179,7 +185,7 @@ Window {
                     GrblSerial.selectedPort = portSelector.currentIndex
                 }
             }
-            Button {
+            ToolButton {
                 objectName: "updateButton"
                 text: "Update"
                 StatePolicy.allowed: "disconnected"
@@ -187,22 +193,14 @@ Window {
                     GrblSerial.updatePortList()
                 }
             }
-            Button {
+            ToolButton {
                 objectName: "connectButton"
                 text: stateMachine.currentState === "disconnected" ? "Connect" : "Disconnect"
                 onClicked: {
                     stateMachine.toggleConnect()
                 }
             }
-            Button {
-                objectName: "clearLogButton"
-                text: "Clear"
-                StatePolicy.allowed: "connected"
-                onClicked: {
-                    GrblConsole.clear()
-                }
-            }
-            Button {
+            ToolButton {
                 objectName: "selectFileButton"
                 text: "Select file"
                 StatePolicy.allowed: "idle"
@@ -210,7 +208,7 @@ Window {
                     fileSelection.open()
                 }
             }
-            Button {
+            ToolButton {
                 objectName: "homeButton"
                 text: "Find home"
                 StatePolicy.allowed: "idle|alarm"
@@ -218,7 +216,7 @@ Window {
                     GrblEngine.home();
                 }
             }
-            Button {
+            ToolButton {
                 objectName: "startButton"
                 text: "Start"
                 visible: enabled
@@ -227,7 +225,7 @@ Window {
                     GrblEngine.start();
                 }
             }
-            Button {
+            ToolButton {
                 objectName: "stopButton"
                 text: "Stop"
                 visible: enabled
@@ -236,7 +234,7 @@ Window {
                     GrblEngine.stop();
                 }
             }
-            Button {
+            ToolButton {
                 objectName: "holdButton"
                 text: "Reset Alarm"
                 StatePolicy.allowed: "alarm"
@@ -244,7 +242,7 @@ Window {
                     GrblEngine.resetAlarm();
                 }
             }
-            Button {
+            ToolButton {
                 objectName: "holdButton"
                 text: "Hold"
                 StatePolicy.forbidden: "hold|alarm|disconnected"
@@ -252,12 +250,21 @@ Window {
                     GrblEngine.hold();
                 }
             }
-            Button {
+            ToolButton {
                 objectName: "resumeButton"
                 text: "Resume"
                 StatePolicy.allowed: "hold"
                 onClicked: {
                     GrblEngine.resume();
+                }
+            }
+            ToolButton {
+                objectName: "settingsButton"
+                icon.source: "qrc:/qtgrbl/res/services-48.png"
+                ToolTip.visible: hovered
+                ToolTip.text: qsTr("Grbl Settings")
+                onClicked: {
+                    settings.open()
                 }
             }
         }

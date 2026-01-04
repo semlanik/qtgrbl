@@ -45,13 +45,15 @@ class GrblSerial : public QObject
     Q_PROPERTY(int selectedPort READ selectedPort WRITE setSelectedPort NOTIFY selectedPortChanged)
     Q_PROPERTY(Status status READ status NOTIFY statusChanged)
     Q_PROPERTY(bool isConnected READ isConnected NOTIFY isConnectedChanged)
-    Q_PROPERTY(int grblError READ grblError WRITE setGrblError NOTIFY grblErrorChanged)
+    Q_PROPERTY(int errorCode READ errorCode NOTIFY errorCodeChanged)
 public:
-    enum Status {
+    enum class Status : uint8_t
+    {
+        Unknown, //! Not connected
         Idle, //! No command is sent, no response awaiting
         Busy, //! Command is sent, awating for response
         Error, //! Error occured, clear error is required
-        Alarm //! Alarm message is received, soft reset is required.
+        Alarm //! Alarm message is received, soft reset is required
     };
     Q_ENUM(Status)
     virtual ~GrblSerial();
@@ -77,23 +79,13 @@ public:
     void sendCommand(QByteArrayList commands, QtGrbl::CommandPriority prio = QtGrbl::CommandPriority::Back);
 
     QStringList portList() const { return m_portList; }
-
     Status status() const { return m_status; }
-
     bool isConnected() const;
-
+    int errorCode() const;
     int selectedPort() const { return m_selectedPort; }
 
-    void setStatus(Status status) {
-        if (status != m_status) {
-            m_status = status;
-            emit statusChanged();
-        }
-    }
-
-    int grblError() const;
-    void setGrblError(int newGrblError);
-
+    void setStatus(Status status);
+    void setErrorCode(int code);
     void setSelectedPort(int selectedPort);
 
 signals:
@@ -103,10 +95,8 @@ signals:
     void portListChanged();
     void statusChanged();
     void isConnectedChanged();
-
     void selectedPortChanged(int selectedPort);
-
-    void grblErrorChanged();
+    void errorCodeChanged();
 
 private:
     GrblSerial();
@@ -116,17 +106,17 @@ private:
     void onError(QSerialPort::SerialPortError error);
 
     QStringList m_portList;
-    Status m_status = Status::Idle; // Sending status
+    Status m_status = Status::Unknown; // Sending status
 
     std::unique_ptr<QSerialPort> m_port;
     QQueue<QByteArray> m_queue; // Pending messages queue
     GrblRemoteMessageBuffer m_sent; // Messages are sent but, not processed
     QByteArray m_activeCommand;
     int m_selectedPort = -1;
-    int m_grblError = 0;
+    int m_errorCode = 0;
 };
 
-class GrblSerialForeign : public QmlSingletoneBase<GrblSerial>
+class QmlGrblSerial : public QmlSingletoneBase<GrblSerial>
 {
     Q_GADGET
     QML_FOREIGN(GrblSerial)

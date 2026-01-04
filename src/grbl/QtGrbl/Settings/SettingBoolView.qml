@@ -23,30 +23,53 @@
  * DEALINGS IN THE SOFTWARE.
  */
 import QtQuick
+import QtQuick.Controls
 
 Item {
     id: root
-    width: indicator.width + 10
-    height: indicator.height + 10
-    Rectangle {
-        id: indicator
-        anchors.centerIn: parent
-        height: 15
-        width: 15
-        radius: width/5
-        color: {
-            switch (GrblSerial.status) {
-                case GrblSerial.Error:
-                    return "red"
-                case GrblSerial.Busy:
-                    return "yellow"
-                case GrblSerial.Alarm:
-                    return "orange"
-                case GrblSerial.Idle:
-                    return "green"
-                default:
-                    return "gray"
-            }
+    property alias name: nameLabel.text
+    property alias value: valueField.checked
+    property bool isChanged: false
+
+    signal clicked(checked: bool)
+    signal reset()
+
+    height: 50
+    Label {
+        id: nameLabel
+        anchors {
+            left: parent.left
+            verticalCenter: parent.verticalCenter
+        }
+    }
+    RoundButton {
+        id: restoreButton
+        anchors {
+            right: valueField.left
+            verticalCenter: parent.verticalCenter
+        }
+        icon.source: "qrc:/qtgrbl/res/reload-48.png"
+        visible: root.isChanged
+        onClicked: root.reset()
+    }
+    Switch {
+        id: valueField
+        anchors {
+            right: spacer.left
+            verticalCenter: parent.verticalCenter
+        }
+
+        enabled: root.enabled
+        onClicked: {
+            root.clicked(checked)
+        }
+    }
+    Item {
+        id: spacer
+        width: 100
+        anchors {
+            right: parent.right
+            verticalCenter: parent.verticalCenter
         }
     }
 }

@@ -22,31 +22,30 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-import QtQuick
+#pragma once
 
-Item {
-    id: root
-    width: indicator.width + 10
-    height: indicator.height + 10
-    Rectangle {
-        id: indicator
-        anchors.centerIn: parent
-        height: 15
-        width: 15
-        radius: width/5
-        color: {
-            switch (GrblSerial.status) {
-                case GrblSerial.Error:
-                    return "red"
-                case GrblSerial.Busy:
-                    return "yellow"
-                case GrblSerial.Alarm:
-                    return "orange"
-                case GrblSerial.Idle:
-                    return "green"
-                default:
-                    return "gray"
-            }
-        }
+#include "qmlsingletonebase.h"
+
+class GrblErrorCodeMapper : public QObject
+{
+    Q_OBJECT
+public:
+    GrblErrorCodeMapper(QObject *parent = nullptr);
+
+    static GrblErrorCodeMapper *instance()
+    {
+        static GrblErrorCodeMapper instance;
+        return &instance;
     }
-}
+
+    Q_INVOKABLE QString getString(int errorCode) const;
+    Q_INVOKABLE QString getDetails(int errorCode) const;
+};
+
+class QmlGrblErrorCodeMapper : public QmlSingletoneBase<GrblErrorCodeMapper>
+{
+    Q_GADGET
+    QML_FOREIGN(GrblErrorCodeMapper)
+    QML_SINGLETON
+    QML_NAMED_ELEMENT(GrblErrorCodeMapper)
+};

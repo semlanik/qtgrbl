@@ -26,6 +26,15 @@ qt_add_resources(qtgrbl fonts
         fonts/DSEG14.ttf
 )
 
+qt_add_resources(qtgrbl res
+    PREFIX "/qtgrbl"
+    FILES
+        res/services-48.png
+        res/reload-48.png
+        res/arrow-right-48.png
+        res/arrow-left-48.png
+)
+
 qt_add_library(QtGrblCommon SHARED
     universallistmodel.cpp universallistmodel.h
     universallistmodelbase.cpp
