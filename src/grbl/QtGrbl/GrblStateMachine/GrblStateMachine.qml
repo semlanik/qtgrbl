@@ -117,7 +117,22 @@ PolicyStateMachine {
         id: connected
         name: "connected"
         stateMachine: root
-        initialState: idle
+        initialState: {
+            switch (GrblEngine.grblStatus.grblState) {
+            case GrblStatus.Idle:
+                idle
+                break;
+            case GrblStatus.Run:
+                running
+                break;
+            case GrblStatus.Alarm:
+                alarm
+                break;
+            case GrblStatus.Hold:
+                hold
+                break;
+            }
+        }
         onEntered: {
             GrblEngine.subscribeStatusUpdate();
         }
