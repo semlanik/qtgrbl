@@ -22,25 +22,5 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-import QtQuick
-import QtQuick.Controls
 
-import QtGrbl
-
-GrblPopup {
-    id: root
-    buttonText: qsTr("Clear error")
-    onClicked: GrblSerial.clearError()
-    Connections {
-        target: GrblSerial
-        function onErrorCodeChanged() {
-            if (GrblSerial.errorCode !== 0) {
-                root.headerText = "Error(" + GrblSerial.errorCode + "): " + GrblErrorCodeMapper.getString(GrblSerial.errorCode)
-                root.detailsText = GrblErrorCodeMapper.getDetails(GrblSerial.errorCode)
-                root.open()
-            } else {
-                root.close()
-            }
-        }
-    }
-}
+#include "qtgrblcommon.h"

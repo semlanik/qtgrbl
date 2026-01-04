@@ -22,25 +22,30 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-import QtQuick
-import QtQuick.Controls
+#pragma once
 
-import QtGrbl
+#include "qmlsingletonebase.h"
 
-GrblPopup {
-    id: root
-    buttonText: qsTr("Clear error")
-    onClicked: GrblSerial.clearError()
-    Connections {
-        target: GrblSerial
-        function onErrorCodeChanged() {
-            if (GrblSerial.errorCode !== 0) {
-                root.headerText = "Error(" + GrblSerial.errorCode + "): " + GrblErrorCodeMapper.getString(GrblSerial.errorCode)
-                root.detailsText = GrblErrorCodeMapper.getDetails(GrblSerial.errorCode)
-                root.open()
-            } else {
-                root.close()
-            }
-        }
+class GrblAlarmCodeMapper : public QObject
+{
+    Q_OBJECT
+public:
+    GrblAlarmCodeMapper(QObject *parent = nullptr);
+
+    static GrblAlarmCodeMapper *instance()
+    {
+        static GrblAlarmCodeMapper instance;
+        return &instance;
     }
-}
+
+    Q_INVOKABLE QString getString(int errorCode) const;
+    Q_INVOKABLE QString getDetails(int errorCode) const;
+};
+
+class QmlGrblAlarmCodeMapper : public QmlSingletoneBase<GrblAlarmCodeMapper>
+{
+    Q_GADGET
+    QML_FOREIGN(GrblAlarmCodeMapper)
+    QML_SINGLETON
+    QML_NAMED_ELEMENT(GrblAlarmCodeMapper)
+};

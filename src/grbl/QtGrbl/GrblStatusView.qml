@@ -66,9 +66,6 @@ Rectangle {
                 labelText: "X"
                 displayLabel: true
                 isValid: GrblEngine.grblStatus.isValid
-                onValueChanged: {
-                    console.log("aedelev: WTF")
-                }
             }
             DigitalNumberDisplay {
                 pointSize: 8

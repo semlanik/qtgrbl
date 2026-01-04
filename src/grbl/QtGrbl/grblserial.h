@@ -46,6 +46,7 @@ class GrblSerial : public QObject
     Q_PROPERTY(Status status READ status NOTIFY statusChanged)
     Q_PROPERTY(bool isConnected READ isConnected NOTIFY isConnectedChanged)
     Q_PROPERTY(int errorCode READ errorCode NOTIFY errorCodeChanged)
+    Q_PROPERTY(int alarmCode READ alarmCode NOTIFY alarmCodeChanged)
 public:
     enum class Status : uint8_t
     {
@@ -71,6 +72,7 @@ public:
     Q_INVOKABLE void connectPort(int portIndex);
     Q_INVOKABLE void disconnectPort();
     Q_INVOKABLE void clearError();
+    Q_INVOKABLE void clearAlarm();
 
     void clearCommandQueue();
 
@@ -81,12 +83,15 @@ public:
     QStringList portList() const { return m_portList; }
     Status status() const { return m_status; }
     bool isConnected() const;
-    int errorCode() const;
+    int errorCode() const {return m_errorCode; };
+    int alarmCode() const { return m_alarmCode; }
     int selectedPort() const { return m_selectedPort; }
 
     void setStatus(Status status);
     void setErrorCode(int code);
+    void setAlarmCode(int code);
     void setSelectedPort(int selectedPort);
+
 
 signals:
     void responseReceived(const QByteArray &response);
@@ -97,6 +102,8 @@ signals:
     void isConnectedChanged();
     void selectedPortChanged(int selectedPort);
     void errorCodeChanged();
+
+    void alarmCodeChanged();
 
 private:
     GrblSerial();
@@ -114,6 +121,7 @@ private:
     QByteArray m_activeCommand;
     int m_selectedPort = -1;
     int m_errorCode = 0;
+    int m_alarmCode;
 };
 
 class QmlGrblSerial : public QmlSingletoneBase<GrblSerial>

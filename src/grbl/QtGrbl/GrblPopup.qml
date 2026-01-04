@@ -25,22 +25,57 @@
 import QtQuick
 import QtQuick.Controls
 
-import QtGrbl
-
-GrblPopup {
+Popup {
     id: root
-    buttonText: qsTr("Clear error")
-    onClicked: GrblSerial.clearError()
-    Connections {
-        target: GrblSerial
-        function onErrorCodeChanged() {
-            if (GrblSerial.errorCode !== 0) {
-                root.headerText = "Error(" + GrblSerial.errorCode + "): " + GrblErrorCodeMapper.getString(GrblSerial.errorCode)
-                root.detailsText = GrblErrorCodeMapper.getDetails(GrblSerial.errorCode)
-                root.open()
-            } else {
-                root.close()
+    property alias headerText: header.text
+    property alias detailsText: details.text
+    property alias buttonText: confirmButton.text
+
+    signal clicked()
+
+    anchors.centerIn: parent
+    contentWidth: 300
+    contentHeight: 200
+    modal: true
+    focus: true
+    closePolicy: Popup.NoAutoClose
+    onClosed: root.clear()
+    contentItem: Item {
+        Text {
+            id: header
+            anchors {
+                left: parent.left
+                right: parent.right
             }
+            height: implicitHeight
+            wrapMode: Text.WordWrap
+            font.bold: true
         }
+        Text {
+            id: details
+            anchors {
+                verticalCenter: parent.verticalCenter
+                left: parent.left
+                right: parent.right
+            }
+            height: implicitHeight
+            wrapMode: Text.WordWrap
+            horizontalAlignment: Text.AlignHCenter
+        }
+
+        Button {
+            id: confirmButton
+            anchors{
+                bottom: parent.bottom
+                horizontalCenter: parent.horizontalCenter
+            }
+            onClicked: root.clicked()
+        }
+    }
+
+    function clear()
+    {
+        details.text = ""
+        header.text = ""
     }
 }

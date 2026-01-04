@@ -274,6 +274,10 @@ Window {
         id: errorPopup
     }
 
+    GrblAlarmPopup {
+        id: alarmPopup
+    }
+
     GrblStateMachine {
         id: stateMachine
     }

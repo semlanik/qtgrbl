@@ -84,6 +84,6 @@ QString GrblErrorCodeMapper::getString(int errorCode) const
 QString GrblErrorCodeMapper::getDetails(int errorCode) const
 {
     --errorCode;
-    Q_ASSERT_X(errorCode >= 0 && errorCode < ErrorCodeMax, "GrblErrorCodeMapper::getString", "Error code is out of bounds");
+    Q_ASSERT_X(errorCode >= 0 && errorCode < ErrorCodeMax, "GrblErrorCodeMapper::getDetails", "Error code is out of bounds");
     return QString::fromUtf8(ErrorCodeMappings[errorCode].details);
 }

@@ -29,14 +29,14 @@ import QtGrbl
 
 GrblPopup {
     id: root
-    buttonText: qsTr("Clear error")
-    onClicked: GrblSerial.clearError()
+    buttonText: qsTr("Clear alarm and reset")
+    onClicked: GrblSerial.clearAlarm()
     Connections {
         target: GrblSerial
-        function onErrorCodeChanged() {
-            if (GrblSerial.errorCode !== 0) {
-                root.headerText = "Error(" + GrblSerial.errorCode + "): " + GrblErrorCodeMapper.getString(GrblSerial.errorCode)
-                root.detailsText = GrblErrorCodeMapper.getDetails(GrblSerial.errorCode)
+        function onAlarmCodeChanged() {
+            if (GrblSerial.alarmCode !== 0) {
+                root.headerText = "Alarm(" + GrblSerial.alarmCode + "): " + GrblAlarmCodeMapper.getString(GrblSerial.alarmCode)
+                root.detailsText = GrblAlarmCodeMapper.getDetails(GrblSerial.alarmCode)
                 root.open()
             } else {
                 root.close()

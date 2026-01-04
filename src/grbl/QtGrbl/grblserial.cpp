@@ -24,10 +24,16 @@
  */
 
 #include "grblserial.h"
+#include "grblerrorcodemapper.h"
+#include "grblalarmcodemapper.h"
 
 #include <QSerialPortInfo>
 #include <QSerialPort>
 #include <QDebug>
+#include <qloggingcategory.h>
+
+Q_STATIC_LOGGING_CATEGORY(SerialDumps, "qtgrbl.serial.dump")
+#define grblSerialDump(...) qCDebug(SerialDumps, __VA_ARGS__)
 
 using namespace QtGrbl;
 
@@ -93,25 +99,36 @@ void GrblSerial::connectPort(int portIndex)
     QObject::connect(m_port.get(), &QSerialPort::readyRead, this, [this]() {
         while (m_port->canReadLine()) {
             QByteArray grblData = m_port->readLine();
-            qDebug() << "Raw data: "  << grblData.toHex();
-            qDebug() << "String data: " << grblData;
+            grblSerialDump("[IN] Buffer: %s", qPrintable(grblData));
+            grblSerialDump("[IN] Hex: %s", qPrintable(grblData.toHex()));
 
             emit responseReceived(grblData);
             if (grblData == "ok\r\n") {
                 m_activeCommand.clear();
                 setStatus(Status::Idle);
                 processQueue();
-            } else if (grblData.toLower().startsWith("alarm:")) {
-                //TODO: Show user popup that indicates the actual alarm message.
-                //Reset the machine state immediately for now.
-                sendCommand(QByteArray("\x18"), CommandPriority::Realtime);
-            } else if (grblData.toLower().startsWith("error:")) {
-                qDebug() << "newGrblError string" << grblData.split(':').last();
+                return;
+            }
 
-                setErrorCode(std::atoi(grblData.split(':').last().trimmed().data()));
+            static constexpr QByteArrayView AlarmIdentifier("ALARM:");
+            if (grblData.startsWith(AlarmIdentifier)) {
+                qCritical() << "Alarm occured: " << QString::fromLatin1(grblData) << " active command: " << m_activeCommand;
+                const int alarmCode = std::atoi(grblData.data() + AlarmIdentifier.size());
+                qCritical("%s. %s", qPrintable(GrblAlarmCodeMapper::instance()->getString(alarmCode)), qPrintable(GrblAlarmCodeMapper::instance()->getDetails(alarmCode)));
+                setStatus(Status::Alarm);
+                setAlarmCode(alarmCode);
+                return;
+            }
+
+            static constexpr QByteArrayView ErrorIdentifier("error:");
+            if (grblData.startsWith(ErrorIdentifier)) {
+                qCritical("Error occured: %s Active command: %s", qPrintable(grblData), qPrintable(m_activeCommand));
+                const int errorCode = std::atoi(grblData.data() + ErrorIdentifier.size());
+                qCritical("%s. %s", qPrintable(GrblErrorCodeMapper::instance()->getString(errorCode)), qPrintable(GrblErrorCodeMapper::instance()->getDetails(errorCode)));
                 setStatus(Status::Error);
+                setErrorCode(errorCode);
                 sendCommand(QString("!"), QtGrbl::CommandPriority::Realtime);
-                qCritical() << "Error occured: " << QString::fromLatin1(grblData) << " active command: " << m_activeCommand;
+                return;
             }
         }
     });
@@ -173,8 +190,7 @@ void GrblSerial::sendCommand(QByteArrayList commands, QtGrbl::CommandPriority pr
         }
 
         command = command.trimmed();
-        qDebug() << "Send command: " << command << "Prio: " << prio;
-
+        grblSerialDump("[OUT] command: %s Prio: %d", qPrintable(command), prio);
         if (prio == QtGrbl::CommandPriority::Realtime) {
             write(command);
             continue;
@@ -227,7 +243,7 @@ void GrblSerial::write(const QByteArray &buffer)
         return;
     }
 
-    qDebug() << "write buffer: " << buffer;
+    grblSerialDump("[OUT] Buffer: %s", qPrintable(buffer));
     if (m_port->write(buffer) != buffer.size()) {
         qCritical() << "Unable to write command buffer";
         return;
@@ -248,16 +264,23 @@ void GrblSerial::clearError()
     }
 }
 
+void GrblSerial::clearAlarm()
+{
+    if (m_status == Status::Alarm) {
+        qWarning() << "Manual alarm unlock triggered";
+        setStatus(Status::Idle);
+        setAlarmCode(0);
+        sendCommand(QByteArray("\x18"), QtGrbl::CommandPriority::Realtime);
+    } else {
+        qWarning() << "Manual alarm unlock triggered but status is: " << m_status;
+    }
+}
+
 void GrblSerial::clearCommandQueue()
 {
     m_queue.clear();
     m_sent.clear();
     sendCommand(QByteArray("\x85"), CommandPriority::Front);
-}
-
-int GrblSerial::errorCode() const
-{
-    return m_errorCode;
 }
 
 void GrblSerial::setStatus(Status status)
@@ -272,8 +295,18 @@ void GrblSerial::setErrorCode(int code)
 {
     if (m_errorCode == code)
         return;
+
     m_errorCode = code;
     emit errorCodeChanged();
+}
+
+void GrblSerial::setAlarmCode(int code)
+{
+    if (m_alarmCode == code)
+        return;
+
+    m_alarmCode = code;
+    emit alarmCodeChanged();
 }
 
 void GrblSerial::setSelectedPort(int selectedPort)

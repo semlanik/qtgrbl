@@ -19,8 +19,15 @@ qt_add_qml_module(QtGrbl
         DigitalNumberDisplay.qml
         GCodeStateItem.qml
         GrblStatusIndicator.qml
+        GrblPopup.qml
+        GrblAlarmPopup.qml
         GrblErrorPopup.qml
         Settings/GrblSettingsView.qml
+        Settings/SettingIntView.qml
+        Settings/SettingUnitView.qml
+        Settings/SettingFloatView.qml
+        Settings/SettingBoolView.qml
+        Settings/SettingMaskView.qml
     SOURCES
         grblserial.cpp grblserial.h
         grblgcodestate.cpp grblgcodestate.h
@@ -29,13 +36,8 @@ qt_add_qml_module(QtGrbl
         grblengine.cpp grblengine.h
         grblconsole.cpp grblconsole.h
         grblsettingsmodel.h grblsettingsmodel.cpp
-        QML_FILES Settings/SettingIntView.qml
-        QML_FILES Settings/SettingUnitView.qml
-        QML_FILES Settings/SettingFloatView.qml
-        QML_FILES Settings/SettingBoolView.qml
-        SOURCES
-        QML_FILES Settings/SettingMaskView.qml
-        SOURCES grblerrorcodemapper.h grblerrorcodemapper.cpp
+        grblerrorcodemapper.h grblerrorcodemapper.cpp
+        grblalarmcodemapper.h grblalarmcodemapper.cpp
 )
 
 target_link_libraries(QtGrbl PRIVATE QtGrblCommon Qt::SerialPort)

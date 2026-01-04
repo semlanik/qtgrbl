@@ -40,6 +40,7 @@ qt_add_library(QtGrblCommon SHARED
     universallistmodelbase.cpp
     grblabstractdatamodel.cpp grblabstractdatamodel.h
     qtgrblcommon.h
+    qtgrblcommon.cpp
 )
 
 target_link_libraries(QtGrblCommon PUBLIC Qt::Core)
