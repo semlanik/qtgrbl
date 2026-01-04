@@ -60,6 +60,8 @@ Column {
         width: parent.width
         clip: true
         ScrollBar.vertical: ScrollBar { }
+        highlightMoveDuration: 100
+        highlightMoveVelocity: -1
         delegate: Row {
             height: childrenRect.height
             spacing: 5
@@ -85,8 +87,9 @@ Column {
         }
 
         onCountChanged: {
-            if (followLog.checked)
-                positionViewAtEnd()
+            if (followLog.checked) {
+                viewport.currentIndex = count - 1
+            }
         }
     }
 }

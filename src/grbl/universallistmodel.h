@@ -82,8 +82,8 @@ public:
         }
         beginInsertRows(QModelIndex(), m_container.count(), m_container.count());
         m_container.append(QSharedPointer<T>(value));
-        emit countChanged();
         endInsertRows();
+        emit countChanged();
         return m_container.count() - 1;
     }
 
@@ -106,8 +106,8 @@ public:
         }
         beginInsertRows(QModelIndex(), 0, 0);
         m_container.prepend(QSharedPointer<T>(value));
-        emit countChanged();
         endInsertRows();
+        emit countChanged();
         return 0;
     }
 
@@ -131,8 +131,8 @@ public:
         if(valueIndex >= 0) {
             beginRemoveRows(QModelIndex(), valueIndex, valueIndex);
             m_container.removeAt(valueIndex);
-            emit countChanged();
             endRemoveRows();
+            emit countChanged();
         }
     }
 
