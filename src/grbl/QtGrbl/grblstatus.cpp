@@ -31,101 +31,116 @@
 #include <QByteArrayList>
 #include <QMetaEnum>
 
+Q_STATIC_LOGGING_CATEGORY(StatusParsing, "qtgrbl.status.parsing")
+#define dumpParsing qCDebug(StatusParsing)
+
 namespace QtGrbl {
-
-GrblCoordinates &GrblCoordinates::operator+=(const GrblCoordinates &other)
-{
-    m_x += other.m_x;
-    m_y += other.m_y;
-    m_z += other.m_z;
-    return *this;
-}
-
-GrblCoordinates &GrblCoordinates::operator-=(const GrblCoordinates &other)
-{
-    m_x -= other.m_x;
-    m_y -= other.m_y;
-    m_z -= other.m_z;
-    return *this;
-}
 
 qreal GrblCoordinates::x() const
 {
-    return m_x;
+    return m_coord[GrblCoordinates::X];
 }
 
 qreal GrblCoordinates::y() const
 {
-    return m_y;
+    return m_coord[GrblCoordinates::Y];
 }
 
 qreal GrblCoordinates::z() const
 {
-    return m_z;
+    return m_coord[GrblCoordinates::Z];
 }
 
-bool GrblCoordinates::update(QByteArray value)
+bool GrblCoordinates::update(QByteArrayView data)
 {
-    auto coords = QString::fromLatin1(value).split(',');
+    dumpParsing << "[" << this << "] GrblCoordinates::update" << data;
     bool changed = false;
-    const auto updateCoordinate = [&](qreal &member, size_t pos) {
-        if (coords.size() <= pos)
-            return;
-
-        if (const auto &item = coords.at(pos); !item.isEmpty()) {
-            if (const qreal coord = item.toDouble(); coord != member) {
-                changed = true;
-                member = coord;
-            }
+    size_t coordIdx = 0;
+    for (qsizetype end = data.indexOf(','), start = 0; start < data.size(); end = data.indexOf(',', start)) {
+        if (end < 0)
+            end = data.size();
+        const QByteArrayView dataPart(data.cbegin() + start, data.cbegin() + end);
+        bool ok = false;
+        const auto newValue = dataPart.toDouble(&ok);
+        if (!ok)
+            qCritical() << "Unable to convert " << dataPart << " to coordinate";
+        if (m_coord[coordIdx] != newValue) {
+            changed = true;
+            m_coord[coordIdx] = newValue;
         }
-    };
+        coordIdx++;
+        if (coordIdx >= sizeof(m_coord)) {
+            qCritical() << "Malformed coordinates " << dataPart;
+            break;
+        }
+        start = end + 1;
+    }
 
-    updateCoordinate(m_x, 0);
-    updateCoordinate(m_y, 1);
-    updateCoordinate(m_z, 2);
+    qCDebug(StatusParsing) << "[" << this << "] GrblCoordinates::update updated coordinates " << *this;
     return changed;
 }
 
+QDebug operator<<(QDebug debug, const GrblCoordinates &coord)
+{
+    const QDebugStateSaver save(debug);
+    debug.nospace().noquote();
+    debug << "GrblCoordinates(x: " << coord.m_coord[GrblCoordinates::X] << ", y: " << coord.m_coord[GrblCoordinates::Y] << ", z: " << coord.m_coord[GrblCoordinates::Z] << ')';
+    return debug;
+}
+
+
 bool GrblStatus::parseData()
 {
-    QByteArray statusData = m_raw.mid(GrblStatusPrefix.size(), m_raw.size() - (GrblStatusPrefix.size() + 1));
-    QByteArrayList statusDataList = statusData.split('|');
-    parseState(statusDataList.takeFirst());
-    for (const auto &data : statusDataList)
-        parseStatusField(data);
+    QByteArrayView data(m_raw.cbegin() + GrblStatusPrefix.size(), m_raw.cend() - GrblStatusPostfix.size());
+    dumpParsing << "GrblStatus::parseData" << data;
+
+    bool ok = true;
+    for (qsizetype end = data.indexOf('|'), start = 0; start < data.size(); end = data.indexOf('|', start)) {
+        if (end < 0)
+            end = data.size();
+        const QByteArrayView dataPart(data.cbegin() + start, data.cbegin() + end);
+        if (start == 0)
+            ok &= parseState(dataPart);
+        else
+            ok &= parseStatusField(dataPart);
+        start = end + 1;
+    }
+    return ok;
+}
+
+bool GrblStatus::parseState(QByteArrayView data)
+{
+    dumpParsing << "GrblStatus::parseState" << data;
+    if (const auto colonIndex = data.indexOf(':'); colonIndex >= 0)
+        data = QByteArrayView(data.cbegin(), data.cbegin() + colonIndex);
+
+    const auto stateEnum = QMetaEnum::fromType<GrblState>();
+    const auto enumKey = data.toByteArray();
+    bool ok = false;
+    int value = stateEnum.keyToValue(enumKey.data(), &ok);
+    if (!ok) {
+        qWarning() << "Invalid grbl state: " << data;
+        setGrblState(Invalid);
+        return false;
+    }
+    setGrblState(static_cast<GrblStatus::GrblState>(value));
+
     return true;
 }
 
-void GrblStatus::parseState(QByteArray stateData)
+bool GrblStatus::parseStatusField(QByteArrayView data)
 {
-    qDebug() << "GrblStatus::parseState(" << stateData << ")";
-    stateData = stateData.split(':').first();
-    int index = metaObject()->indexOfEnumerator("GrblState");
-    Q_ASSERT_X(index >= 0 && index < metaObject()->enumeratorCount(),
-               "GrblStatus", "GrblState is not found in meta object");
+    dumpParsing << "GrblStatus::parseState" << data;
 
-    bool ok = false;
-    QMetaEnum enumerator = metaObject()->enumerator(index);
-    int value = enumerator.keyToValue(stateData.data(), &ok);
-
-    if (!ok) {
-        qWarning() << "Invalid grbl state: " << stateData;
-        setGrblState(Invalid);
-        return;
-    }
-    setGrblState(static_cast<GrblStatus::GrblState>(value));
-}
-
-void GrblStatus::parseStatusField(const QByteArray &data)
-{
-    auto dataList = data.split(':');
-    if (dataList.size() != 2) {
-        qCritical() << "Invalid grbl status data: " << dataList;
-        return;
+    auto colonIndex = data.indexOf(':');
+    if (colonIndex < 1) {
+        qCritical() << "Invalid grbl status data: " << data;
+        return false;
     }
 
-    auto key = dataList.at(0);
-    auto value = dataList.at(1);
+    const QByteArrayView key(data.cbegin(), data.cbegin() + colonIndex);
+    const QByteArrayView value(data.cbegin() + colonIndex + 1, data.cend());
+    dumpParsing << "GrblStatus::parseState key:" << key << "value:" << value;
 
     if (key == "MPos") {
         m_lastUpdateMPos = true;
@@ -152,26 +167,13 @@ void GrblStatus::parseStatusField(const QByteArray &data)
     } else {
         qWarning() << "Unhandled status field: " << key;
     }
-}
 
-GrblCoordinates GrblStatus::mPos()
-{
-    return m_mPos;
-}
-
-GrblCoordinates GrblStatus::wPos()
-{
-    return m_wPos;
+    return true;
 }
 
 QString GrblStatus::grblStateString() const
 {
     return enumToString(m_grblState, isValid());
-}
-
-qreal GrblStatus::feedSpeed() const
-{
-    return m_feedSpeed;
 }
 
 void GrblStatus::setFeedSpeed(qreal newFeedSpeed)

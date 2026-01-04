@@ -41,34 +41,51 @@ class GrblCoordinates
     Q_PROPERTY(qreal y READ y)
     Q_PROPERTY(qreal z READ z)
 
+    constexpr static size_t X = 0;
+    constexpr static size_t Y = 1;
+    constexpr static size_t Z = 2;
 public:
-    GrblCoordinates &operator+=(const GrblCoordinates &other);
-    GrblCoordinates &operator-=(const GrblCoordinates &other);
     qreal x() const;
     qreal y() const;
     qreal z() const;
 
-    bool update(QByteArray data);
+    bool update(QByteArrayView data);
 
-    GrblCoordinates &operator+(const GrblCoordinates& rhs)
+    GrblCoordinates &operator+=(const GrblCoordinates &other)
     {
-        m_x += rhs.m_x;
-        m_y += rhs.m_y;
-        m_z += rhs.m_z;
-        return *this;
-    }
-    GrblCoordinates &operator-(const GrblCoordinates& rhs)
-    {
-        m_x -= rhs.m_x;
-        m_y -= rhs.m_y;
-        m_z -= rhs.m_z;
+        m_coord[X] += other.m_coord[X];
+        m_coord[Y] += other.m_coord[Y];
+        m_coord[Z] += other.m_coord[Z];
         return *this;
     }
 
+    GrblCoordinates &operator-=(const GrblCoordinates &other)
+    {
+        m_coord[X] -= other.m_coord[X];
+        m_coord[Y] -= other.m_coord[Y];
+        m_coord[Z] -= other.m_coord[Z];
+        return *this;
+    }
+
+    friend GrblCoordinates operator+(GrblCoordinates lhs, const GrblCoordinates& rhs)
+    {
+        lhs.m_coord[X] += rhs.m_coord[X];
+        lhs.m_coord[Y] += rhs.m_coord[Y];
+        lhs.m_coord[Z] += rhs.m_coord[Z];
+        return lhs;
+    }
+
+    friend GrblCoordinates operator-(GrblCoordinates lhs, const GrblCoordinates& rhs)
+    {
+        lhs.m_coord[X] -= rhs.m_coord[X];
+        lhs.m_coord[Y] -= rhs.m_coord[Y];
+        lhs.m_coord[Z] -= rhs.m_coord[Z];
+        return lhs;
+    }
+
+    friend QDebug operator<<(QDebug debug, const GrblCoordinates &coord);
 private:
-    qreal m_x = 0.0;
-    qreal m_y = 0.0;
-    qreal m_z = 0.0;
+    qreal m_coord[3]{ 0.0, 0.0, 0.0 };
 };
 
 class GrblStatus : public GrblAbstractDataModel
@@ -103,11 +120,11 @@ public:
         return m_grblState;
     }
 
-    GrblCoordinates mPos();
-    GrblCoordinates wPos();
-    QString grblStateString() const;
+    GrblCoordinates mPos() const { return m_mPos; }
+    GrblCoordinates wPos() const { return m_wPos; }
+    qreal feedSpeed() const { return m_feedSpeed; }
 
-    qreal feedSpeed() const;
+    QString grblStateString() const;
     void setFeedSpeed(qreal newFeedSpeed);
 
 signals:
@@ -128,8 +145,8 @@ private:
         }
     }
 
-    void parseState(QByteArray state);
-    void parseStatusField(const QByteArray &data);
+    bool parseState(QByteArrayView state);
+    bool parseStatusField(QByteArrayView data);
 
     GrblState m_grblState;
     GrblCoordinates m_mPos;
