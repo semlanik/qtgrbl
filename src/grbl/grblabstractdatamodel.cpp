@@ -42,7 +42,6 @@ void GrblAbstractDataModel::parseRawData(const QByteArray &data)
     if (!parseData())
         m_raw.clear();
 
-    qDebug() << "m_raw.isEmpty" << m_raw.isEmpty();
     emit isValidChanged();
 }
 

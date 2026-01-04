@@ -183,7 +183,7 @@ void GrblEngine::hold()
         return;
     }
     //Stop Spindle first
-    emit sendCommand(QByteArrayList() << "!", CommandPriority::Realtime);
+    emit sendCommand(QByteArray("!"), CommandPriority::Realtime);
 }
 
 void GrblEngine::resume()
@@ -192,7 +192,7 @@ void GrblEngine::resume()
         qCritical() << "Unable to resume, serial engine is null";
         return;
     }
-    emit sendCommand(QByteArrayList() << "~", CommandPriority::Realtime);
+    emit sendCommand(QByteArray("~"), CommandPriority::Realtime);
     subscribeStatusUpdate();
 }
 
