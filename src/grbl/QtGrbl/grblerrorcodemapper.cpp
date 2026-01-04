@@ -49,6 +49,8 @@ std::array ErrorCodeMappings = {
     ErrorCodeMapping{"Travel exceeded","Jog target exceeds machine travel. Jog command has been ignored."},
     ErrorCodeMapping{"Invalid jog command","Jog command has no '=' or contains prohibited g-code."},
     ErrorCodeMapping{"Setting disabled","Laser mode requires PWM output."},
+    ErrorCodeMapping{"Unknown","Unknown"},
+    ErrorCodeMapping{"Unknown","Unknown"},
     ErrorCodeMapping{"Unsupported command","Unsupported or invalid g-code command found in block."},
     ErrorCodeMapping{"Modal group violation","More than one g-code command from same modal group found in block."},
     ErrorCodeMapping{"Undefined feed rate","Feed rate has not yet been set or is undefined."},
