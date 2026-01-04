@@ -55,7 +55,7 @@ std::array FloatSettings {
     QtGrbl::FloatSetting {122, "Acceleration Z", 10.0, "mm/s²"},
     QtGrbl::FloatSetting {130, "Max travel X", 200.0, "mm"},
     QtGrbl::FloatSetting {131, "Max travel Y", 200.0, "mm"},
-    QtGrbl::FloatSetting {132, "Max travel X", 200.0, "mm"},
+    QtGrbl::FloatSetting {132, "Max travel Z", 200.0, "mm"},
 };
 
 std::array BoolSettings {
