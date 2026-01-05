@@ -99,8 +99,8 @@ void GrblSerial::connectPort(int portIndex)
     QObject::connect(m_port.get(), &QSerialPort::readyRead, this, [this]() {
         while (m_port->canReadLine()) {
             QByteArray grblData = m_port->readLine();
-            grblSerialDump("[IN] Buffer: %s", qPrintable(grblData));
-            grblSerialDump("[IN] Hex: %s", qPrintable(grblData.toHex()));
+            grblSerialDump("[I] Buffer: %s", qPrintable(grblData));
+            grblSerialDump("[I] Hex: %s", qPrintable(grblData.toHex()));
 
             emit responseReceived(grblData);
             if (grblData == "ok\r\n") {
@@ -190,7 +190,7 @@ void GrblSerial::sendCommand(QByteArrayList commands, QtGrbl::CommandPriority pr
         }
 
         command = command.trimmed();
-        grblSerialDump("[OUT] command: %s Prio: %d", qPrintable(command), prio);
+        grblSerialDump("[O] command: %s Prio: %d", qPrintable(command), prio);
         if (prio == QtGrbl::CommandPriority::Realtime) {
             write(command);
             continue;
@@ -243,7 +243,7 @@ void GrblSerial::write(const QByteArray &buffer)
         return;
     }
 
-    grblSerialDump("[OUT] Buffer: %s", qPrintable(buffer));
+    grblSerialDump("[O] Buffer: %s", qPrintable(buffer));
     if (m_port->write(buffer) != buffer.size()) {
         qCritical() << "Unable to write command buffer";
         return;
