@@ -131,6 +131,11 @@ PolicyStateMachine {
             case GrblStatus.Hold:
                 hold
                 break;
+            case GrblStatus.Jog:
+                hold
+                break;
+            default:
+                unknown
             }
         }
         onEntered: {
@@ -167,6 +172,11 @@ PolicyStateMachine {
             }
 
             PolicyState {
+                id: unknown
+                name: "unknown"
+                stateMachine: root
+            }
+            PolicyState {
                 id: idle
                 name: "idle"
                 stateMachine: root
@@ -182,6 +192,11 @@ PolicyStateMachine {
             PolicyState {
                 id: running
                 name: "running"
+                stateMachine: root
+            }
+            PolicyState {
+                id: jog
+                name: "jog"
                 stateMachine: root
             }
             PolicyState {

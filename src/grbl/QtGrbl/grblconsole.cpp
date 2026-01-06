@@ -84,7 +84,9 @@ void GrblConsole::setSaveToFile(bool value)
     if (m_logFile.isOpen() && !value) {
         m_logFile.close();
     } else if(!m_logFile.isOpen() && value) {
-        m_logFile.open(QFile::WriteOnly);
+        if (!m_logFile.open(QFile::WriteOnly)) {
+            qCritical() << "Unable to open log file for writing";
+        }
     }
 
     emit saveToFileChanged();

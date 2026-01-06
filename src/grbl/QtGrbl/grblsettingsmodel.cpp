@@ -231,6 +231,32 @@ QVariant GrblSettingsModel::data(const QModelIndex &index, int role) const
     return {};
 }
 
+const SettingBase *GrblSettingsModel::setting(int code) const
+{
+    SettingBase *result = nullptr;
+    int row = -1;
+    const auto compare = [code](const QtGrbl::SettingBase &v) -> bool { return v.code() == code; };
+    if (auto it = std::find_if(IntSettings.begin(), IntSettings.end(), compare); it != IntSettings.end()) {
+        row = IntSettintgsStartIndex + std::distance(IntSettings.begin(), it);
+        if (!m_data->grblValues[row].isEmpty())
+            result = it;
+    } else if (auto it = std::find_if(FloatSettings.begin(), FloatSettings.end(), compare); it != FloatSettings.end()) {
+        row = FloatSettingsStartIndex + std::distance(FloatSettings.begin(), it);
+        if (!m_data->grblValues[row].isEmpty())
+            result = it;
+    } else if (auto it = std::find_if(BoolSettings.begin(), BoolSettings.end(), compare); it != BoolSettings.cend()) {
+        row = BoolSettingsStartIndex + std::distance(BoolSettings.begin(), it);
+        if (!m_data->grblValues[row].isEmpty())
+            result = it;
+    } else if (auto it = std::find_if(MaskSettings.begin(), MaskSettings.end(), compare); it != MaskSettings.end()) {
+        row = MaskSettingsStartIndex + std::distance(MaskSettings.begin(), it);
+        if (!m_data->grblValues[row].isEmpty())
+            result = it;
+    }
+
+    return result;
+}
+
 QList<QByteArray> GrblSettingsModel::serialize(SerializeMode mode) const
 {
     QList<QByteArray> result;
@@ -261,10 +287,11 @@ bool GrblSettingsModel::parseItemData(const QByteArray &data)
     static const QRegularExpression settingRegex("\\$(\\d{1,3})=([^\\s]+)\\s*");
     bool result = false;
     int row = -1;
+    uint8_t code  = 0;
     bool clearUserValue = false;
     if (const auto match = settingRegex.match(QString::fromUtf8(data)); match.hasMatch()) {
         qDebug() << "Has match";
-        uint8_t code = uint8_t(match.captured(1).toInt(&result));
+        code = uint8_t(match.captured(1).toInt(&result));
         if (!result)
             return result;
 
@@ -294,6 +321,7 @@ bool GrblSettingsModel::parseItemData(const QByteArray &data)
     if (isInRange(row)) {
         m_data->grblValues[row] = data;
         emit dataChanged(index(row), index(row), { SettingModelRoles::Data, SettingModelRoles::Valid, SettingModelRoles::Changed });
+        emit settingUpdated(code);
     }
 
     return result;

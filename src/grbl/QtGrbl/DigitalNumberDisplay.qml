@@ -25,21 +25,24 @@
 
 import QtQuick
 
+import QtGrbl
+
 Item {
     id: root
-    property alias pointSize: text.font.pointSize
-    property alias color: text.color
-    property real value: 0
-    property int digitsBefore: 3
-    property int digitsAfter: 3
+    property alias pointSize: valueText.font.pointSize
+    property alias decimalPointSize: decimalText.font.pointSize
+    property alias color: valueText.color
+    property alias value: privateRoot.value
+    property alias digitsBefore: privateRoot.before
+    property alias digitsAfter: privateRoot.after
     property alias labelText: label.text
     property alias displayLabel: label.visible
     property bool isValid: false
 
-    width: parent.width
-    height: text.height + root.pointSize / 2
+    width: labelText ? parent.width : childrenRect.width
+    height: valueText.height + root.pointSize / 2
 
-    QtObject {
+    DigitalNumberDisplayImpl {
         id: privateRoot
         readonly property int spacingSize : 4
     }
@@ -48,47 +51,83 @@ Item {
         id: label
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
-        font.pointSize: text.font.pointSize
+        font.pointSize: valueText.font.pointSize
         height: implicitHeight
         visible: false
     }
 
     Text {
-        id: shadow
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.right: parent.right
+        id: valueShadow
+        anchors {
+            verticalCenter: parent.verticalCenter
+            right: valueText.right
+        }
         color {
-            a: text.color.a/10
-            r: text.color.r
-            g: text.color.g
-            b: text.color.b
+            a: valueText.color.a/10
+            r: valueText.color.r
+            g: valueText.color.g
+            b: valueText.color.b
         }
         font.family: "DSEG14 Classic"
-        font.pointSize: text.font.pointSize
+        font.pointSize: valueText.font.pointSize
         height: implicitHeight
         text: " ".repeat(privateRoot.spacingSize) +
               "~".repeat(root.digitsBefore) +
-              "." +
-              "~".repeat(root.digitsAfter)
+              "."
     }
     Text {
-        id: text
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.right: parent.right
+        id: decimalShadow
+        anchors {
+            verticalCenter: parent.verticalCenter
+            right: decimalText.right
+        }
+        color {
+            a: valueText.color.a/10
+            r: valueText.color.r
+            g: valueText.color.g
+            b: valueText.color.b
+        }
+        font.family: "DSEG14 Classic"
+        font.pointSize: decimalText.font.pointSize
+        height: implicitHeight
+        text: "~".repeat(root.digitsAfter)
+    }
+    Text {
+        id: valueText
+        anchors {
+            verticalCenter: parent.verticalCenter
+            right: decimalText.left
+        }
         font.family: "DSEG14 Classic"
         height: implicitHeight
+        width: implicitWidth
         text: {
-            var absValue = Math.abs(root.value)
-            var minusIndent = absValue === root.value ? 1 : 0
-            var digitNumber =
-                        Math.max(Math.floor(Math.log10(Math.abs(Math.floor(absValue)))), 0) + 1
+            if (!privateRoot.fits || !root.isValid)
+                return "-".repeat(root.digitsBefore) + "."
 
-            if (digitNumber > root.digitsBefore || !root.isValid)
-                return "-".repeat(root.digitsBefore) + "." + "-".repeat(root.digitsAfter)
+            var minusIndent = Math.abs(root.value) === root.value ? 1 : 0
+            var spacing =
+                    " ".repeat((minusIndent + root.digitsBefore - privateRoot.calculatedBefore) * privateRoot.spacingSize)
+            return spacing + (minusIndent ? "" : "-") + privateRoot.integerValue + "."
+        }
+    }
+    Text {
+        id: decimalText
+        anchors {
+            bottom: valueText.bottom
+            right: parent.right
+        }
+        font.family: "DSEG14 Classic"
+        font.pointSize: valueText.font.pointSize - 2
+        height: implicitHeight
+        width: implicitWidth
+        text: {
+            if (!privateRoot.fits || !root.isValid)
+                return "-".repeat(root.digitsAfter)
 
             var spacing =
-                    " ".repeat((minusIndent + root.digitsAfter - digitNumber) * privateRoot.spacingSize)
-            return spacing + root.value.toFixed(root.digitsAfter)
+                    "0".repeat(root.digitsAfter - privateRoot.calculatedAfter)
+            return spacing + privateRoot.decimalValue
         }
     }
 }

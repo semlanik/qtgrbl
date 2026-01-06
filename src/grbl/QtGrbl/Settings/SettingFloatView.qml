@@ -25,5 +25,9 @@
 import QtQuick
 
 SettingUnitView {
-    validator: DoubleValidator {}
+    validator: DoubleValidator {
+        notation: DoubleValidator.StandardNotation
+        decimals: 3
+        locale: "C"
+    }
 }

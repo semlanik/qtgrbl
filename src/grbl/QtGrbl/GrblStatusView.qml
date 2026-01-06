@@ -68,6 +68,7 @@ Rectangle {
                 isValid: GrblEngine.grblStatus.isValid
             }
             DigitalNumberDisplay {
+                width: parent.width
                 pointSize: 8
                 value: GrblEngine.grblStatus.mPos.x
                 isValid: GrblEngine.grblStatus.isValid
@@ -80,6 +81,7 @@ Rectangle {
                 isValid: GrblEngine.grblStatus.isValid
             }
             DigitalNumberDisplay {
+                width: parent.width
                 pointSize: 8
                 value: GrblEngine.grblStatus.mPos.y
                 isValid: GrblEngine.grblStatus.isValid
@@ -92,6 +94,7 @@ Rectangle {
                 isValid: GrblEngine.grblStatus.isValid
             }
             DigitalNumberDisplay {
+                width: parent.width
                 pointSize: 8
                 value: GrblEngine.grblStatus.mPos.z
                 isValid: GrblEngine.grblStatus.isValid

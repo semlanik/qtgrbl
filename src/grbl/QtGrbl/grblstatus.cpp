@@ -120,7 +120,7 @@ bool GrblStatus::parseState(QByteArrayView data)
     int value = stateEnum.keyToValue(enumKey.data(), &ok);
     if (!ok) {
         qWarning() << "Invalid grbl state: " << data;
-        setGrblState(Invalid);
+        setGrblState(GrblState::Invalid);
         return false;
     }
     setGrblState(static_cast<GrblStatus::GrblState>(value));

@@ -47,7 +47,8 @@ GrblEngine::GrblEngine(QObject *parent) : QObject(parent),
     m_gcodeState(std::make_unique<GrblGCodeState>()),
     m_grblStatus(std::make_unique<GrblStatus>()),
     m_settings(std::make_unique<GrblSettingsModel>()),
-    m_settingsProxy(std::make_unique<GrblSettingsSortingModel>())
+    m_settingsProxy(std::make_unique<GrblSettingsSortingModel>()),
+    m_jog(std::make_unique<GrblJogController>(m_settings.get()))
 {
     m_settingsProxy->setSourceModel(m_settings.get());
     m_settingsProxy->sort(0, Qt::AscendingOrder);

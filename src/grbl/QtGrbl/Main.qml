@@ -75,6 +75,9 @@ Window {
                     }
                 }
             }
+            ButtonJog {
+                width: parent ? parent.width : 0
+            }
         }
     }
 

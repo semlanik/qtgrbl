@@ -98,8 +98,7 @@ class GrblStatus : public GrblAbstractDataModel
     Q_PROPERTY(QtGrbl::GrblCoordinates wPos READ wPos NOTIFY posChanged)
     Q_PROPERTY(qreal feedSpeed READ feedSpeed WRITE setFeedSpeed NOTIFY feedSpeedChanged)
 public:
-    enum GrblState {
-        Invalid = -1,
+    enum class GrblState : uint8_t {
         Idle,
         Run,
         Hold,
@@ -108,7 +107,8 @@ public:
         Door,
         Check,
         Home,
-        Sleep
+        Sleep,
+        Invalid = 255
     };
     Q_ENUM(GrblState)
 
@@ -148,11 +148,11 @@ private:
     bool parseState(QByteArrayView state);
     bool parseStatusField(QByteArrayView data);
 
-    GrblState m_grblState;
+    GrblState m_grblState = GrblState::Invalid;
     GrblCoordinates m_mPos;
     GrblCoordinates m_wPos;
     GrblCoordinates m_wCO;
-    qreal m_feedSpeed;
+    qreal m_feedSpeed = 0.0;
     bool m_lastUpdateMPos = false;
 };
 

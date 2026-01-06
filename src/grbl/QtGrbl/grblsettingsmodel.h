@@ -152,6 +152,8 @@ public:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
+    const SettingBase *setting(int code) const;
+
     QList<QByteArray> serialize(SerializeMode mode = SerializeMode::All) const;
 
     bool parseItemData(const QByteArray &data);
@@ -164,6 +166,7 @@ public:
 
 signals:
     void hasChangesChanged();
+    void settingUpdated(int code);
 
 private:
     SettingsRawData *m_data;

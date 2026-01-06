@@ -33,6 +33,12 @@ qt_add_resources(qtgrbl res
         res/reload-48.png
         res/arrow-right-48.png
         res/arrow-left-48.png
+        res/jog-left-48.png
+        res/jog-right-48.png
+        res/jog-up-48.png
+        res/jog-down-48.png
+        res/x-y-axis-48.png
+        res/z-axis-48.png
 )
 
 qt_add_library(QtGrblCommon SHARED

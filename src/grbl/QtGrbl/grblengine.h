@@ -32,6 +32,7 @@
 #include <QPointer>
 #include <QTimer>
 
+#include "JogControl/grbljogcontroller.h"
 #include "qmlsingletonebase.h"
 #include "qtgrblcommon.h"
 #include "grblgcodestate.h"
@@ -50,6 +51,7 @@ class GrblEngine : public QObject
     Q_PROPERTY(QtGrbl::GrblStatus *grblStatus READ grblStatus CONSTANT)
     Q_PROPERTY(QtGrbl::GrblSettingsModel *settings READ settings CONSTANT)
     Q_PROPERTY(QtGrbl::GrblSettingsSortingModel *settingsProxy READ settingsProxy CONSTANT)
+    Q_PROPERTY(QtGrbl::GrblJogController *jog READ jog CONSTANT)
 public:
     explicit GrblEngine(QObject *parent = nullptr);
     virtual ~GrblEngine();
@@ -104,10 +106,17 @@ public:
         return m_settingsProxy.get();
     }
 
+    QtGrbl::GrblJogController *jog() const
+    {
+        return m_jog.get();
+    }
+
+
     Q_INVOKABLE void resetState();
 
     Q_INVOKABLE void applySettings();
     Q_INVOKABLE void saveSettings(const QUrl &fileUrl) const;
+
 signals:
     void consoleOutputChanged();
     void filePathChanged();
@@ -128,6 +137,7 @@ private:
     std::unique_ptr<GrblSettingsSortingModel> m_settingsProxy;
     QTimer m_statusTimer;
     inline static QJSEngine *s_engine = nullptr;
+    std::unique_ptr<QtGrbl::GrblJogController> m_jog;
 };
 
 class QmlGrblEngine : public QmlSingletoneBase<GrblEngine>

@@ -47,6 +47,6 @@ namespace QtGrbl {
     template<typename T>
     QString enumToString(T value, bool isValid = true)
     {
-        return isValid ? QMetaEnum::fromType<T>().valueToKey(value) : "-";
+        return isValid ? QMetaEnum::fromType<T>().valueToKey(quint64(value)) : "-";
     }
 }

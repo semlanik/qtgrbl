@@ -5,14 +5,10 @@ qt_add_qml_module(QtGrbl
     VERSION 1.0
     QML_FILES
         GrblStateMachine/GrblStateMachine.qml
+        JogControl/ButtonJog.qml
+        JogControl/JogTextInput.qml
         GCodeStateView.qml
         ConsoleOutput.qml
-        JogControl/PlainMaterial.qml
-        JogControl/GizmoJogPlane.qml
-        JogControl/GizmoControl.qml
-        JogControl/GizmoArrow.qml
-        JogControl/Jog3dControl.qml
-        JogControl/PlaneControl.qml
         Main.qml
         GrblStatusView.qml
         SideToolbar.qml
@@ -29,6 +25,8 @@ qt_add_qml_module(QtGrbl
         Settings/SettingBoolView.qml
         Settings/SettingMaskView.qml
     SOURCES
+        JogControl/grbljogcontroller.h
+        JogControl/grbljogcontroller.cpp
         grblserial.cpp grblserial.h
         grblgcodestate.cpp grblgcodestate.h
         grblconsolerecord.cpp grblconsolerecord.h
@@ -38,6 +36,7 @@ qt_add_qml_module(QtGrbl
         grblsettingsmodel.h grblsettingsmodel.cpp
         grblerrorcodemapper.h grblerrorcodemapper.cpp
         grblalarmcodemapper.h grblalarmcodemapper.cpp
+        digitalnumberdisplay.h digitalnumberdisplay.cpp
 )
 
 target_link_libraries(QtGrbl PRIVATE QtGrblCommon Qt::SerialPort)
